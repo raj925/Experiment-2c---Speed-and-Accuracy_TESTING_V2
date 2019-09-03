@@ -1,0 +1,406 @@
+ %% advisor GET HUMAN ADVISORS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% created by Aaron Celaya %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% aaron.celaya@new.ox.ac.uk
+% In this portion of the experiment, participants express their 
+% judgements on a perceptual task and are given feedback.  Three training 
+% blocks (30 trials each) are completed followed by four recorded blocks
+% (100 trials each). The purpose of the training blocks is to step the
+% individual to 70% accuracy.  After the third block, the dot difference
+% is locked for the duration of the experimental blocks (blocks 4-7).
+% Subjects' decision, confidence judgement, and stimuli are recorded. 
+% The aim of getting human advisors is to record enough subjects to provide
+% actual human advisors at each dot difference (x - xx, in intervals of 1) 
+% for use in the next portion of this experiment (where subjects will be 
+% in a JAS and can choose between a human or computer advisor).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%% clear
+clear all;
+close all;
+clc;
+
+rawdata_path = 'rawdata/';
+
+%% start ticking
+tic
+
+%% Subjects' details
+create_subject_directory
+
+%% All settings %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+settings                         = [];
+% Reseed the random-number generator for each expt.
+settings.resetrn                 = rng('shuffle');
+settings.computer                = computer;
+settings.scripts                 = getscripts(); % save scripts in settings;
+%-- Input device
+settings.response.until_release  = 1;
+settings.response.escape         = 'ESCAPE';
+settings.response.pause          = 'p';
+
+%% default
+if ~isfield(settings,'experimenter'),    settings.experimenter = 'space';end
+if ~isfield(settings,'escape'),          settings.escape = 'ESCAPE';end
+if ~isfield(settings,'pause'),           settings.pause = 'P';end
+if ~isfield(settings,'until_release'),   settings.until_release = true;end
+if ~isfield(settings,'restarted'),       settings.restarted = false;end
+
+settings.do_instr = false;
+
+%% initialise variables
+% number of trials definition
+settings.ntrials         = 2; %should be 100
+settings.nblocks         = 8; %should be 8
+settings.ntrialsprac     = 2; %should be 30
+settings.nblocksprac     = 3;  %should be 3
+settings.blk4expstart    = 7; % should be 4
+settings.ntotalblocks    = settings.nblocks + settings.nblocksprac;             % there are 3 prac blocks in total:
+settings.ntrialsall      = [repmat(settings.ntrialsprac,1,settings.nblocksprac) ...
+                                    repmat(settings.ntrials, 1, settings.nblocks)];
+
+% stimulus variables
+settings.initialDotDifference    = 20;                                          % staircase initialization, should be 20
+settings.stim.durstim            = .160;                                        % time first order stimulus is shown on screen
+settings.stim.RSI2               = 1;                                           % time between confidence decision and next-t first-order stimulus presentation
+settings.stim.beep               = sin(2*pi*(0:1/44100:.1)*1000);               % error tone
+settings.stim.beep2              = sin(pi*(0:1/44100:.1)*1000);                 % finish tone
+settings.stim.beeprate           = 22254;                                       % error tone rate
+settings.stim.beepvolume         = .5;                                          % error tone volume
+
+% define the grid for the placement of the dots:
+settings.xymatrix = [repmat(linspace(-57,57,20),1,20);...
+                            sort(repmat(linspace(-57,57,20),1,20))];
+
+% instructions on screen
+settings.instr.cjtext        = {'60%' '70%' '80%' '90%' '100%'};
+settings.instr.finaldecision = {'What is your final decision?'};
+settings.instr.interval      = {'LEFT' 'RIGHT'};
+
+settings.instr.groups        = [1 12 14];                % groupings of instruction slides
+
+% save paths in settings
+settings.rawdata_path            = rawdata_path;
+
+%% Build trials
+build_trials
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% in case experiment was restarted after crash
+if (subject.restart)
+    [filename, pathname] = uigetfile('*.mat', 'Pick last saved file ');
+    load([pathname filename]);
+    starttrial = t;
+    settings.restarted = 1;
+else
+    starttrial=1;
+end
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% start experiment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Sc = start_psychtb([0 0 1300 600]);  %[0 0 1300 600] 
+%%
+
+% MD: 
+Sc.fps = 60;
+
+settings.fps = Sc.fps;                                                          % refresh rate (Hz). IMPORTANT! Make sure this value equals the RR of the screen used AND the RR in the start_psychtb.m function
+settings.frame = (1/settings.fps);                                                   % average duration (ms) of a frame
+
+if subject.id~=999
+    ListenChar(2);
+    HideCursor();
+end
+
+%% define stimulus boxes (make them)
+define_boxes
+
+%% define confidence scale
+define_scale_
+
+%% Set priority for script execution to realtime priority:
+priorityLevel=MaxPriority(Sc.window);
+Priority(priorityLevel);
+settings.startexp = GetSecs;
+
+% %%%%%%%%%%%
+% DELETE THIS
+% %%%%%%%%%%%
+% MDD: try out here various bits of the code to avoid having to run trials for fine tweaking
+% Screen('DrawLines',Sc.window,innerrect1out,3,255);
+% Screen('DrawLines',Sc.window,innerrect2out,3,255);
+Screen('TextSize',Sc.window,11);
+
+Screen('FrameRect', Sc.window , [255 255 255], stmRect1, 4);
+Screen('FrameRect', Sc.window , [255 255 255], stmRect2, 4);
+
+[nx, ny, textbounds] = DrawFormattedText(Sc.window, 'Human Advisor',    'center','center',  [0 0 0], 70, 0, 0, 1.5, 0, stmRect1);
+[nx, ny, textbounds] = DrawFormattedText(Sc.window, 'Computer Advisor', 'center', 'center', [0 0 0], 70, 0, 0, 1.5, 0, stmRect2);
+
+Screen('Flip', Sc.window);
+[x,y,buttons] = GetMouse;
+% wait for click inside one of the rectangles
+optRects = [stmRect1; stmRect2];
+optRects
+while 1 
+    [x,y,buttons] = GetMouse;
+    if(buttons(1))
+        % if left button pressed check if inside a rectangle
+        diffs = [x - optRects(:,1) y - optRects(2,:) optRects(3,:) - x optRects(4,:) - y];
+        diffs_sign = sign(diffs);  diffs_sign_sum = sum(diffs_sign, 2);
+        sum4 = find(diffs_sign_sum == 4);
+        if(~isempty(sum4))
+            which_option = sum4
+            switch which_option
+                case 1,
+                    Screen('FrameRect', Sc.window , [255 0 0],     stmRect1, 4);
+                    Screen('FrameRect', Sc.window , [255 255 255], stmRect2, 4);
+                case 2,
+                    Screen('FrameRect', Sc.window , [255 255 255], stmRect1, 4);
+                    Screen('FrameRect', Sc.window , [255 0 0],     stmRect2, 4);
+            end
+            [nx, ny, textbounds] = DrawFormattedText(Sc.window, 'Human Advisor',    'center','center',  [0 0 0], 70, 0, 0, 1.5, 0, stmRect1);
+            [nx, ny, textbounds] = DrawFormattedText(Sc.window, 'Computer Advisor', 'center', 'center', [0 0 0], 70, 0, 0, 1.5, 0, stmRect2);
+            
+            Screen('Flip', Sc.window);
+            % wait for mouse release
+            while 1, [x,y,buttons] = GetMouse; if(~buttons(1)), break; end, end
+            break;
+        end
+    end
+end
+sca
+return
+
+% %%%%%%%%%%%%%
+%%  initialize dotdifference
+trials(1).dotdifference = settings.initialDotDifference;
+trials(2).dotdifference = settings.initialDotDifference;
+%% load human stimuli and responses
+load('humanAdvisor');     %load Human Advisor trial ID's, wheredots, and answers (int1)
+samplingvalues=load('samplingvalues.mat');
+%% trial loop
+for t = starttrial : length(trials)
+    settings.currentTrial = t;
+    %% experimenter output
+    if t > 1
+        disp(['t: ' num2str(t-1)])
+        disp(['accuracy1: ' num2str(trials(t-1).cor)])
+        disp(['confidence1: ' num2str(trials(t-1).cj1)])
+        disp('------------------------------------------');
+    end
+    if(settings.do_instr)
+        %% instructions
+        if trials(t).instr
+            if t==1
+                instructions(Sc, settings, 1)
+            elseif trials(t).block==4
+                instructions(Sc, settings, 2)
+            end
+        end
+    end
+    
+    %% start trial
+    % Clear screen to background color
+    draw_static(Sc,settings)
+    
+    trials(t).time_starttrial = Screen('Flip',Sc.window);
+    if t == 1 || subject.restart == 1 || trials(t).break == 1, time = GetSecs; end
+    
+    if t == settings.blk4expstart              % Should be 91. Creates an average DD based on the final DD and the lowest DD attained in blocks 2 and 3
+        practiceDD = [trials(1:settings.blk4expstart-1).dotdifference];
+%         practiceDD = [trials(30:90).dotdifference];
+        lowestpracticeDD = min(practiceDD);
+%         finalDD = trials(90).dotdifference;
+%         averagefinalDD = (lowestpracticeDD + finalDD)/2;
+%         adjustedDD = fix(averagefinalDD);
+        adjustedDD = 1;
+    end
+%  
+    % vectors are created that contain logical values to tell where
+    % dots have to be set in the squares (randomized)
+    if t<=2
+        larger = 200 + trials(t).dotdifference;
+        smaller = 200 - trials(t).dotdifference;
+        trials(t).wheredots(trials(t).wherelarger,randsample(400,larger)) = 1;
+        trials(t).wheredots(3-trials(t).wherelarger,randsample(400,smaller)) = 1;
+        trials(t).wheredots = logical(trials(t).wheredots);
+    end
+    
+    if t>2
+        switch trials(t).staircase
+            case 1
+                trials(t).dotdifference = ...
+                    staircase([trials(t-2).cor trials(t-1).cor], ...
+                    [trials(t-2).dotdifference trials(t-1).dotdifference]);
+                    
+                    larger = 200 + trials(t).dotdifference;
+                    smaller = 200 - trials(t).dotdifference;
+                    trials(t).wheredots(trials(t).wherelarger,randsample(400,larger)) = 1;
+                    trials(t).wheredots(3-trials(t).wherelarger,randsample(400,smaller)) = 1;
+                    trials(t).wheredots = logical(trials(t).wheredots);
+            case 2
+                trials(t).dotdifference = trials(t-1).dotdifference ;
+                    
+                    larger = 200 + trials(t).dotdifference;
+                    smaller = 200 - trials(t).dotdifference;
+                    trials(t).wheredots(trials(t).wherelarger,randsample(400,larger)) = 1;
+                    trials(t).wheredots(3-trials(t).wherelarger,randsample(400,smaller)) = 1;
+                    trials(t).wheredots = logical(trials(t).wheredots);
+            case 3
+                trials(t).dotdifference = adjustedDD;
+                
+                     trials(t).wheredots = humanAdvisor(adjustedDD).wheredots{t,1}
+                     trials(t).wheredots = logical(trials(t).wheredots);
+                     
+                
+%                 dd = 1; 
+%                 humanAdvisor(dd).trialid(7);              % dotdifference on t-1 should equal humanAdvisor(x)
+%                 trials(t).wheredots = humanAdvisor(dd).wheredots{7,1};
+%                 trials(t).wheredots = logical(trials(t).wheredots);
+        end
+    end
+    %% stimulus presentation
+    Screen('DrawLines',Sc.window,innerrect1out,3,255);
+    Screen('DrawLines',Sc.window,innerrect2out,3,255);
+    Screen('DrawDots', Sc.window, settings.xymatrix(:,squeeze(trials(t).wheredots(1,:))), 2, 255, center1, 2);
+    Screen('DrawDots', Sc.window, settings.xymatrix(:,squeeze(trials(t).wheredots(2,:))), 2, 255, center2, 2);
+    draw_static(Sc,settings)
+    
+    % Show stimulus on screen at next possible display refresh cycle,
+    % and record stimulus onset time in 'onsetstim':
+    
+    t2flip = time + settings.stim.RSI2 - settings.frame;
+    [trials(t).VBLTimestampOnsetStim, trials(t).onsetstim, FlipTimestamp, trials(t).tmissed_onset1] = Screen('Flip', Sc.window, t2flip);
+                
+    
+    % stimulus is shown for 160 ms and the screen turns blank again
+    % no response collection before 160 ms
+    draw_static(Sc,settings)
+    t2flip = trials(t).onsetstim + settings.stim.durstim - settings.frame;
+    [trials(t).VBLTimestampOffsetStim, trials(t).offsetstim, Fts, trials(t).tmissed_offset1] = Screen('Flip',Sc.window, t2flip);
+    
+    %% subject decision point
+    [trials(t).cj1, trials(t).resp1_t, trials(t).int1, trials(t).responded1] = drag_slider_im(Sc,settings);
+    
+    % define accuracy
+    trials(t).cor = trials(t).int1 == trials(t).wherelarger;
+    
+    % define reaction times
+    trials(t).rt = trials(t).resp1_t - trials(t).offsetstim;
+    
+    time = trials(t).resp1_t;
+    
+    
+    %% present advisor options
+    if trials(t).block>=4
+%         Screen('DrawLines',Sc.window,innerrect1out,3,255);
+%         Screen('DrawLines',Sc.window,innerrect2out,3,255);
+        Screen('TextSize',Sc.window,11);
+        Screen('FrameRect', Sc.window , [255 0 0 ],innerrect1out, 4);
+        Screen('FrameRect', Sc.window , [255 0 0 ],innerrect2out, 4);
+            [nx, ny, textbounds] = DrawFormattedText(Sc.window, 'Human Advisor',    'center','center',  [0 0 0], 70, 0, 0, 1.5, 0, innerrect1out);
+            [nx, ny, textbounds] = DrawFormattedText(Sc.window, 'Computer Advisor', 'center', 'center', [0 0 0], 70, 0, 0, 1.5, 0, innerrect2out);
+        Screen('Flip', Sc.window);
+        [x,y,buttons] = GetMouse;
+        while ~any(buttons) % wait for click
+            [x,y,buttons] = GetMouse;
+        end
+%         ShowCursor ('Arrow');    % Show mouse pointer
+%         resp = 0; buttons=[]; haschanged=false; hasconfirmed=false;int=0;  % Initialize variables
+    end
+    %% Collect Response (Choice of Advisor)
+%     if trials(t).block>=4
+% %         while ~any(buttons) % wait for click
+% %         [x,y,buttons] = GetMouse; 
+% %         end
+% %         while ~hasconfirmed;
+% %             while any(buttons) || ~haschanged   % wait for release and change of cj and confirmation
+% %             [resp_x, resp_y, buttons] = GetMouse();
+%             resp_x == DrawFormattedText(Sc.window, 'Human Advisor',...
+%                 [495],'center', [0 0 0]);
+%             resp_y == DrawFormattedText(Sc.window, 'Computer Advisor',...
+%                 [695], 'center', [0 0 0]);
+%                  if resp_x;
+%                     trials(t).selectedAdvisor = 1;  %Human Advisor
+%                 elseif resp_y;
+%                     trials(t).selectedAdvisor = 2; %Computer Advisor
+%                  end
+% %             end
+% %         end
+%     end 
+    %% advisor answer
+    if trials(t).block>=4
+%         switch trials(t).selectedAdvisor
+%             case 1
+                trials(t).humanadvisorAnswer = ...
+                    humanAdvisor(adjustedDD).int1(t,1);
+%             case 2
+                dotdifference = abs(200 - sum(trials(t).wheredots(1,:),2));
+                ss = samplingvalues.x(dotdifference);
+
+                % take sample from left box
+                leftsample = sum(trials(t).wheredots(1,randi(400,ss,1)));
+                % take sample from right box
+                rightsample = sum(trials(t).wheredots(2,randi(400,ss,1)));
+
+                % make a decision
+                trials(t).algorithmicadvisorAnswer = (rightsample > leftsample)+1;
+
+%                     algorithmicadvisorAnswer(trials(t).wheredots,samplingvalues);
+%         end
+    end
+    %% compute timing variables
+    trials(t).act_stimdur = trials(t).offsetstim - trials(t).onsetstim;
+    %% close audio/screen buffers
+    Screen('Close');
+    %% error feedback with a beep
+    if trials(t).cor == 0
+        Beeper(1000,.4,.5);
+    end
+    %% save and break
+    if trials(t).break
+        %-- Save data every 20th trials
+        save([rawdata_path subject.dir '/behaviour/' ...
+            subject.fileName '_' num2str(round(t/20))],...
+            'trials', 'settings', 'subject', 't')
+        %-- break
+        Screen('TextSize',Sc.window,18);
+        DrawFormattedText(Sc.window, 'Break. Press button to continue',...
+            'center', 'center', [0 0 0]);
+        Screen('Flip', Sc.window);
+        collect_response(settings.response, inf);
+    end
+    %% feedback
+    if trials(t).feedback % give overall feedback only once in a while
+        feedback_interblock;
+    end
+end
+
+%% save final file
+save([rawdata_path subject.dir '/behaviour/' subject.fileName '_final'], ...
+    'subject','settings','trials');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Thanks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+insimdata = imread(char('Slide14.JPG'));
+texins = Screen('MakeTexture', Sc.window, insimdata);
+Screen('DrawTexture', Sc.window, texins);
+Screen('Flip',Sc.window);
+
+% end of the experiment tone
+% Beeper(261.63,.4,1);
+WaitSecs(.500);
+KbWait;
+
+%% close PTB
+Screen('CloseAll');
+ListenChar(0);
+DisableKeysForKbCheck([]);
+ShowCursor()
+Priority(0);
+toc

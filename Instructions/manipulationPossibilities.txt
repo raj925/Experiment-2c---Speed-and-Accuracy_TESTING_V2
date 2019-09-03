@@ -1,0 +1,22 @@
+for 2-letter scenarios:
+diff order
+1 letter wrong
+1 letter wrong & diff order
+both letters wrong
+
+for 4-letter scenarios:
+2 diff order
+3 diff order
+all four diff order
+2 letters wrong
+2 letters wrong & 2 diff order
+2 letters wrong & 3 diff order
+3 letters wrong
+3 letters wrong & 2 diff order
+3 letters wrong & 3 diff order
+all letters wrong
+
+
+
+
+Overlapping:
