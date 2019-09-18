@@ -379,7 +379,6 @@ for s = 1:nparticipants
     quantCorrect3=sum(cor1==1&abs(cj1)>quants1(2)&abs(cj1)<=quants1(3))/sum(abs(cj1)>quants1(2)&abs(cj1)<=quants1(3));
     quantCorrect4=sum(cor1==1&abs(cj1)>quants1(3))/sum(abs(cj1)>quants1(3));
     
-     
     if s < 41
         if settings.condition == 1
             algor1TrustQ = settings.question(1) + settings.question(2) + settings.question(3) + settings.question(4);
@@ -474,6 +473,7 @@ for s = 1:nparticipants
    for p=1:79
        number = 80-p;
        if choiceTrials(number) ~= choiceTrials(number+1)
+           disp(p);
            break;
        else
            advisorSettled = number;
@@ -483,8 +483,6 @@ for s = 1:nparticipants
    alldata(s).advisorSettleTrial = advisorSettled;
    alldata(s).algor1ChoiceBeforeSettle = sum(whichAdvisor(1:advisorSettled)==1&trialType(1:advisorSettled)==1)/advisorSettled;
    alldata(s).correctInitialBeforeSettle = sum(cor1(1:advisorSettled)==1&trialType(1:advisorSettled)==1)/advisorSettled;
-   alldata(s).cj1ChoiceBeforeSettle = mean(cj1((1:advisorSettled)==1&trialType(1:advisorSettled)==1));
-   alldata(s).cj2ChoiceBeforeSettle = mean(cj2((1:advisorSettled)==1&trialType(1:advisorSettled)==1));
    
    mdl1 = fitglm(cj1,cor1,'Distribution','binomial','Link','logit');
    scores1 = mdl1.Fitted.Probability;
@@ -603,33 +601,6 @@ for s = 1:nparticipants
    
    alldata(s).Az2 = Az2;
    alldata(s).fc2 = fc2;
-   
-   choiceCj1 = cj1(trialType==1);
-   choiceRT = dotRT(trialType==1);
-   choiceAdvisor = whichAdvisor(trialType==1);
-   choicePrevCor = [];
-   
-   corcount = 1;
-   for r = 151:270
-       if trials(r).choiceTrial == 1
-           choicePrevCor(corcount) = trials(r-1).cor2;
-           corcount = corcount + 1;
-       end    
-   end
-   
-   choicePrevCor = choicePrevCor';
-   
-   [B,dev,stats] = mnrfit([choiceCj1,choiceRT],choiceAdvisor);
-   
-   alldata(s).logistB = B;
-   alldata(s).logistDev = dev;
-   alldata(s).logistT = stats.t;
-   alldata(s).logistP = stats.p;
-   if isempty(stats.p)
-       alldata(s).logistSig = 0;
-   else
-       alldata(s).logistSig = sum([stats.p(2)<0.05,stats.p(3)<0.05]);
-   end
    
 %    if s > 80
 %        figure(300)
