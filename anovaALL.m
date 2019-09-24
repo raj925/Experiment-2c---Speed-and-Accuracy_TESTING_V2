@@ -138,6 +138,9 @@ nparticipants = 120;
 
 ya = 1;
 ya2 = 1;
+ya3 = 1;
+ya4 = 1;
+ya5 = 1;
 
 cj1Predictor = [];
 dotRTPredictor = [];
@@ -164,7 +167,7 @@ for s = 1:nparticipants
     int2 = [trials(91:150).int2].';
     algor1AdvisorAnswer = [trials(91:150).algorithm1Answer].';
     algor2AdvisorAnswer = [trials(91:150).algorithm2Answer].';
-    whichAdvisor = [trials(91:150).whichAdvisor].';
+    blk4WhichAdvisor = [trials(91:150).whichAdvisor].';
     cor1 = [trials(91:150).cor1].';
     cor2 = [trials(91:150).cor2].';
     algorCorrect1 = [trials(91:150).algorithm1Correct].';
@@ -184,7 +187,7 @@ for s = 1:nparticipants
     count2 = 1;
     for i = 1:60
         blk4AdviceSway(i) = abs(cj2(i) - cj1(i));
-        if whichAdvisor(i) == 1
+        if blk4WhichAdvisor(i) == 1
             blk4AdviceSway1(count1) = abs(cj2(i) - cj1(i));
             count1 = count1 + 1;
         else
@@ -210,6 +213,8 @@ for s = 1:nparticipants
     blk4AdviceSway = blk4AdviceSway';
     
     wherelarger = wherelarger - 1;
+    cj1Orig = cj1;
+    cj2Orig = cj2;
     cj1 = abs(cj1);
     cj2 = abs(cj2);
     
@@ -218,10 +223,10 @@ for s = 1:nparticipants
     meanCj2WhenWrong = mean(cj2(cor1==0));
     meanCj2WhenCorrect = mean(cj2(cor1==1));
     
-    meanCj2WhenWrongAdv1 = mean(cj2(cor1==0&whichAdvisor==1));
-    meanCj2WhenWrongAdv2 = mean(cj2(cor1==0&whichAdvisor==2));
-    meanCj2WhenCorrectAdv1 = mean(cj2(cor1==1&whichAdvisor==1));
-    meanCj2WhenCorrectAdv2 = mean(cj2(cor1==1&whichAdvisor==2));
+    meanCj2WhenWrongAdv1 = mean(cj2(cor1==0&blk4WhichAdvisor==1));
+    meanCj2WhenWrongAdv2 = mean(cj2(cor1==0&blk4WhichAdvisor==2));
+    meanCj2WhenCorrectAdv1 = mean(cj2(cor1==1&blk4WhichAdvisor==1));
+    meanCj2WhenCorrectAdv2 = mean(cj2(cor1==1&blk4WhichAdvisor==2));
     
     resolution = abs(meanCj1WhenWrong - meanCj1WhenCorrect);
     resolution2 = abs(meanCj2WhenWrong - meanCj2WhenCorrect);
@@ -229,8 +234,16 @@ for s = 1:nparticipants
     resolution2Adv1 = abs(meanCj2WhenWrongAdv1 - meanCj2WhenCorrectAdv1);
     resolution2Adv2 = abs(meanCj2WhenWrongAdv2 - meanCj2WhenCorrectAdv2);
     
-    meanAdvisor1Sway = mean(abs(cj2(whichAdvisor==1)-cj1(whichAdvisor==1)));
-    meanAdvisor2Sway = mean(abs(cj2(whichAdvisor==2)-cj1(whichAdvisor==2)));
+    meanAdvisor1Sway = mean(abs(cj2Orig(blk4WhichAdvisor==1)-cj1Orig(blk4WhichAdvisor==1)));
+    meanAdvisor2Sway = mean(abs(cj2Orig(blk4WhichAdvisor==2)-cj1Orig(blk4WhichAdvisor==2)));
+    
+    adv1Conf = abs(algorConf(blk4WhichAdvisor==1));
+    adv1Acc = algorCorrect1(blk4WhichAdvisor==1);
+    
+    adv1CjWhenWrong = mean(adv1Conf(adv1Acc==0));
+    adv1CjWhenCorrect = mean(adv1Conf(adv1Acc==1));
+    
+    adv1Resolution = abs(adv1CjWhenWrong - adv1CjWhenCorrect);
     
     blk4data(s).blk4Cor1Acc = sum(cor1)/60;
     blk4data(s).blk4Cor2Acc = sum(cor2)/60;
@@ -239,8 +252,8 @@ for s = 1:nparticipants
     blk4data(s).blk4Resolution2Adv1 = resolution2Adv1;
     blk4data(s).blk4Resolution2Adv2 = resolution2Adv2;
     blk4data(s).blk4AverageCj1 = mean(cj1);
-    blk4data(s).adv1Agreed = sum(algor1AdvisorAnswer==int1 & whichAdvisor==1)/30;
-    blk4data(s).adv2Agreed = sum(algor2AdvisorAnswer==int1 & whichAdvisor==2)/30;
+    blk4data(s).adv1Agreed = sum(algor1AdvisorAnswer==int1 & blk4whichAdvisor==1)/30;
+    blk4data(s).adv2Agreed = sum(algor2AdvisorAnswer==int1 & blk4whichAdvisor==2)/30;
     blk4data(s).agreedDiff = blk4data(s).adv2Agreed - blk4data(s).adv1Agreed;
     blk4data(s).res2Diff = blk4data(s).blk4Resolution2Adv2 - blk4data(s).blk4Resolution2Adv1;
     blk4data(s).blk4MeanAdvisor1Sway = meanAdvisor1Sway;
@@ -249,6 +262,8 @@ for s = 1:nparticipants
     blk4data(s).blk4AdviceSway = mean(blk4AdviceSway);
     blk4data(s).blk4AdviceSway1Diff = mean(blk4AdviceSway1Diff);
     blk4data(s).blk4AdviceSway2Diff = mean(blk4AdviceSway2Diff);
+    blk4data(s).adv1Resolution = adv1Resolution;
+    
    
     %% Main Trials Data Variables
     % Where we call all of the data columns that we want from the trials
@@ -356,8 +371,11 @@ for s = 1:nparticipants
    correctFinal = sum(cor2==1)/120;
    
    meanDotRT = mean(dotRT(trialType==2));
-   meanAdvisor1Sway = abs(mean(cj1(whichAdvisor==1))-mean(nonzeros(cj2(whichAdvisor==1))));
-   meanAdvisor2Sway = abs(mean(cj1(whichAdvisor==2))-mean(nonzeros(cj2(whichAdvisor==2))));
+   meanAdvisor1Sway = mean(abs(cj1Orig(whichAdvisor==1)-cj2Orig(whichAdvisor==1)));
+   meanAdvisor2Sway = mean(abs(cj1Orig(whichAdvisor==2)-cj2Orig(whichAdvisor==2)));
+   medianAdvisor1Sway = median(abs(cj1Orig(whichAdvisor==1)-cj2Orig(whichAdvisor==1)));
+   medianAdvisor2Sway = median(abs(cj1Orig(whichAdvisor==2)-cj2Orig(whichAdvisor==2)));
+   medianAdviceSway = median(abs(cj1Orig-cj2Orig));
    algor1Agreed = sum(whichAdvisor==1&cor2==algorCorrect1)/sum(whichAdvisor==1);
    algor2Agreed = sum(whichAdvisor==2&cor2==algorCorrect2)/sum(whichAdvisor==2);
    
@@ -447,6 +465,9 @@ for s = 1:nparticipants
    alldata(s).meanDotRT = meanDotRT;
    alldata(s).meanAdvisor1Sway = meanAdvisor1Sway;
    alldata(s).meanAdvisor2Sway = meanAdvisor2Sway;
+   alldata(s).medianAdvisor1Sway = medianAdvisor1Sway;
+   alldata(s).medianAdvisor2Sway = medianAdvisor2Sway;
+   alldata(s).medianAdviceSway = medianAdviceSway;
    alldata(s).algor1Agreed = algor1Agreed;
    alldata(s).algor2Agreed = algor2Agreed;
    alldata(s).ctcTime = mean(ctcTime);
@@ -494,6 +515,11 @@ for s = 1:nparticipants
    [Az,tp,fp,fc] = rocarea(cj1,cor1);
    [Az2,tp2,fp2,fc2] = rocarea(cj2,cor2);
     
+   alldata(s).cjFull = cj1;
+   alldata(s).kurtCj = kurtosis(cj1);
+   alldata(s).skewCj = skewness(cj1);
+   [N,edges] = histcounts(cj1,5);
+   alldata(s).cjBins = N';
 %    figure(200)
 %    if s> 80
 %        subplot(5,16,ya)
@@ -621,17 +647,25 @@ for s = 1:nparticipants
    
    [B,dev,stats] = mnrfit([choiceCj1,choiceRT],choiceAdvisor);
    
-   alldata(s).logistB = B;
+%    alldata(s).logistB = B;
    alldata(s).logistDev = dev;
-   alldata(s).logistT = stats.t;
-   alldata(s).logistP = stats.p;
+%    alldata(s).logistT = stats.t;
+%    alldata(s).logistP = stats.p;
    if isempty(stats.p)
        alldata(s).logistSig = 0;
    else
        alldata(s).logistSig = sum([stats.p(2)<0.05,stats.p(3)<0.05]);
    end
    
-%    if s > 80
+   [H,P,D] = swtest(cj1);
+   alldata(s).swP = P;
+   alldata(s).swD = D;
+   alldata(s).cj1Kurt = kurtosis(cj1);
+   alldata(s).cj1Skew = skewness(cj1);
+   alldata(s).certainPercent = sum(cj1>25)/120;
+   
+   
+   if s > 80
 %        figure(300)
 %        subplot(5,8,ya);
 %        scatter(cj1(trialType==1),whichAdvisor(trialType==1));
@@ -649,7 +683,26 @@ for s = 1:nparticipants
 %        txt = ['p' num2str(s-80)];
 %        title(txt);
 %        ya2 = ya2 + 1;
-%    end
+% 
+%     figure(500)
+%     subplot(5,8,ya3);
+%     normplot(cj1);
+%     txt = ['p' num2str(s-80) ': SW = ' num2str(D) ', p = ' num2str(P)];
+%     title(txt)
+%     ya3 = ya3 + 1;
+%     
+%     figure(600)
+%     subplot(5,8,ya4);
+%     histfit(cj1);
+%     xlim([0 50]);
+%     txt = ['p' num2str(s-80) ': algor1Choice = ' num2str(alldata(s).algor1Choice)];
+%     title(txt)
+%     ya4 = ya4 + 1;
+% 
+   
+
+
+   end
    
    
    %% Uncomment to run the Metacognitive Calculations
@@ -747,6 +800,53 @@ for s = 1:nparticipants
 
 end
 
+algorChoiceVec = [alldata.algor1Choice]';
+algorChoiceCjs = [alldata.cjFull]';
+algorChoiceVec = [algorChoiceVec algorChoiceCjs];
+algorChoiceVec = sortrows(algorChoiceVec);
+
+% for yep = 1:120
+%     figure(900)
+%     subplot(10,12,yep);
+%     histfit(algorChoiceVec(yep,2:121));
+%     xlim([0 50]);
+%     txt = [num2str(yep) ': adv1% = ' num2str(algorChoiceVec(yep,1))];
+%     title(txt)
+% end
+
+algorChoiceVec = [alldata.algor1Choice]';
+algorChoiceCjs = [alldata.cjFull]';
+prefStrength = [alldata.preferenceStrength]';
+
+
+figure(1100)
+kurtCobain = [alldata.kurtCj]';
+skewCobain = [alldata.skewCj]';
+subplot(2,2,1)
+scatter(abs(kurtCobain),algorChoiceVec,'filled');
+title('Kurtosis against Choice');
+subplot(2,2,2)
+scatter(abs(skewCobain),algorChoiceVec,'filled');
+title('Skewness against Choice');
+
+subplot(2,2,3)
+scatter(abs(kurtCobain),prefStrength,'filled');
+title('Kurtosis against Pref Strength');
+subplot(2,2,4)
+scatter(abs(skewCobain),prefStrength,'filled');
+title('Skewness against Pref Strength');
+
+certainty = [alldata.certainPercent].';
+figure(1200)
+scatter(certainty,algorChoiceVec,'filled');
+
+
+X = [alldata.cjBins]';
+[idx,C] = kmeans(X,5,'Distance','sqeuclidean','MaxIter',10000,'Replicates',5,'Start','cluster');
+figure(1300)
+algor1ChoiceAll = 1 - algor2Choice;
+gscatter(algor1ChoiceAll,algor2Choice,idx,'rgbmkyc');
+
 bcdata(1:40) = [];
 
 %% Mean Data Loading 
@@ -775,6 +875,7 @@ algor2TrustQ = [alldata.algor2TrustQ].';
 meanCj1 = [alldata.avCj1].';
 meanChoiceCj1 = [alldata.meanChoiceCj1].';
 Az = [alldata.Az].';
+normality = [alldata.swD].';
 
 meanAlgor1AgreeConfDiff = [alldata.meanAlgor1AgreeConfDiff].';
 meanAlgor1DisagreeConfDiff = [alldata.meanAlgor1DisagreeConfDiff].';
